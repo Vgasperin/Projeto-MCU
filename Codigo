@@ -1,0 +1,94 @@
+#define pinoAnalog A1  //Pino de entrada do sensor
+#define pinoRele 3   //Pino de saída do Relé
+#define pino5V 1  //Alimentação do sensor
+#define pinoBuzzer 2 //Pino de saída Buzzer
+#include <LiquidCrystal.h>  //Bibli. do LCD 
+
+const int rs = 8, en = 9, d4 = 4, d5 = 5, d6 = 6, d7 = 7;  
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7); //Pinos LCD
+
+int ValAnalogIn;
+int Porcento;
+
+// Definições das notas musicais
+#define NOTE_C4  262
+#define NOTE_D4  294
+#define NOTE_E4  330
+#define NOTE_F4  349
+#define NOTE_G4  392
+#define NOTE_A4  440
+
+// Melodia para a música "Meu Lanchinho"
+int melody[] = {
+  NOTE_C4, NOTE_D4, NOTE_E4, NOTE_C4,  // "Meu lanchinho"
+  NOTE_C4, NOTE_D4, NOTE_E4, NOTE_C4,  // "Meu lanchinho"
+  NOTE_E4, NOTE_F4, NOTE_G4,           // "Vou comer"
+};
+
+//Cada valor na variável indexada especifica a duração de uma nota
+//4 representa que é 1/4 da duração de uma nota inteira
+
+int noteDurations[] = {
+  4, 4, 4, 4, // "Meu lanchinho"
+  4, 4, 4, 4, // "Meu lanchinho"
+  4, 4, 4,    // "Vou comer"
+  4, 4, 4    
+};
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(pinoBuzzer, OUTPUT);   //pinoBuzzer como saída
+  digitalWrite(pinoBuzzer, LOW); //pinoBuzzer como nível baixo
+  pinMode(pinoRele, OUTPUT);     //pinoRele como saída
+  pinMode(pino5V, OUTPUT);       //pin5V como saída
+  digitalWrite(pino5V, HIGH);    //pino5V como nível alto
+
+  lcd.begin(16, 2); //inicializa LCD, 16 colunas e 2 linhas
+}
+
+//função responsável por tocar a melodia usando o buzzer 
+void tocarMusica() {
+  for (int i = 0; i < 11; i++) {
+    ////duração em milissegundos de cada nota
+    int duration = 1000 / noteDurations[i]; //250 ms
+    // tone() emite as freq. no buzzer
+    tone(pinoBuzzer, melody[i], duration); 
+    delay(duration * 1.50);  // Atraso entre as notas
+    noTone(pinoBuzzer);  // Pausa após cada nota
+  }
+
+}
+void loop() {
+  //leitura dos valores e mapeamento 
+  //do intervalo de 0 a 1023 para 0 a 100
+  ValAnalogIn = analogRead(pinoAnalog);
+  Porcento = map(ValAnalogIn, 1023, 0, 0, 100);
+
+//envia ao LCD 
+  lcd.setCursor(4, 0);
+  lcd.print("MCU 2024");
+  lcd.setCursor(3, 1);
+  lcd.print("UMIDADE: ");
+  lcd.print(Porcento);
+  lcd.print("%");
+
+//Quando estiver em 50% de umidade
+//toca uma melodia como aviso 
+//através do Buzzer
+  if (Porcento == 50) {
+    tocarMusica();
+  }
+
+//Condição para verificar a necessidade
+//de regar a planta (abaixo ou igual a 45%)
+  if (Porcento <= 45) {
+    //aciona o relé, alimentando a bomba 
+    digitalWrite(pinoRele, HIGH); 
+  } else {
+    //mantém/desliga o relé
+    digitalWrite(pinoRele, LOW);
+  }
+
+  delay(1000);
+}
+
